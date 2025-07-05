@@ -1,6 +1,6 @@
 {
   "name": "react-indexeddb-asyncapi",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A TypeScript utility class for Vite-React projects that simplifies IndexedDB operations with async/await syntax.",
   "repository": {
     "type": "git",
