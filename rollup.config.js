@@ -3,21 +3,33 @@ import typescript from "rollup-plugin-typescript2";
 export default [
     // ESM build
     {
-        input: "src/IndexedDBAsyncAPI.ts",
+        input: "src/index.ts",
         output: {
             file: "dist/index.esm.js",
             format: "esm",
         },
-        plugins: [typescript({ useTsconfigDeclarationDir: true })],
+        plugins: [
+            typescript({
+                declaration: true,
+                declarationDir: "dist",
+                rootDir: "src"
+            })
+        ],
     },
     // CJS build
     {
-        input: "src/IndexedDBAsyncAPI.ts",
+        input: "src/index.ts",
         output: {
             file: "dist/index.cjs.js",
             format: "cjs",
-            exports: "default",
+            exports: "named",
         },
-        plugins: [typescript({ useTsconfigDeclarationDir: true })],
+        plugins: [
+            typescript({
+                declaration: true,
+                declarationDir: "dist",
+                rootDir: "src"
+            })
+        ],
     },
 ];
