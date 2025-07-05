@@ -10,6 +10,25 @@
   "bugs": {
     "url": "https://github.com/pallavsharma505/react-indexeddb-asyncapi/issues"
   },
+  "license": "MIT",
+  "keywords": [
+    "react",
+    "indexeddb",
+    "asyncapi",
+    "typescript",
+    "vite",
+    "utility",
+    "database",
+    "async-await",
+    "idb"
+  ],
+  "author": "Pallav Sharma <pallavsharma505@gmail.com>",
+  "contributors": [
+    {
+      "name": "Pallav Sharma",
+      "email": "pallavsharma505@gmail.com"
+    }
+  ],
   "main": "dist/index.cjs.js",
   "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
