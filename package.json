@@ -1,0 +1,30 @@
+{
+  "name": "react-indexeddb-asyncapi",
+  "version": "0.1.0",
+  "description": "A TypeScript utility class for Vite-React projects that simplifies IndexedDB operations with async/await syntax.",
+  "main": "dist/index.cjs.js",
+  "module": "dist/index.esm.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.esm.js",
+      "require": "./dist/index.cjs.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rollup -c",
+    "test": "jest"
+  },
+  "peerDependencies": {
+    "react": "^17.0.0 || ^18.0.0"
+  },
+  "devDependencies": {
+    "rollup": "^3.29.5",
+    "rollup-plugin-typescript2": "^0.34.1",
+    "typescript": "^5.0.0"
+  }
+}
