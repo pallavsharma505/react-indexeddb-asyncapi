@@ -385,6 +385,12 @@ This package works in all modern browsers that support:
 - Proxy objects
 - Async/await (or with transpilation)
 
+## Pending Changes
+
+- Support for tests
+- Linting operations
+- Additional examples and tutorials
+
 ## License
 
 MIT License - see LICENSE file for details.
