@@ -1,7 +1,7 @@
 {
   "name": "react-indexeddb-asyncapi",
-  "version": "0.1.5",
-  "description": "A TypeScript utility class for Vite-React projects that simplifies IndexedDB operations with async/await syntax.",
+  "version": "0.1.6",
+  "description": "A TypeScript utility class for Vite-React projects that simplifies IndexedDB operations with async/await syntax, comprehensive error handling, and automatic retry mechanisms.",
   "type": "module",
   "repository": {
     "type": "git",
@@ -21,7 +21,12 @@
     "utility",
     "database",
     "async-await",
-    "idb"
+    "idb",
+    "error-handling",
+    "retry",
+    "recovery",
+    "monitoring",
+    "circuit-breaker"
   ],
   "author": "Pallav Sharma <pallavsharma505@gmail.com>",
   "contributors": [

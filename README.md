@@ -9,7 +9,11 @@ A modern TypeScript wrapper for IndexedDB that converts callback-based operation
 - 📦 **Export/Import**: Easy database backup and restore functionality
 - 🎯 **Type Safe**: Full TypeScript support with proper typing
 - 🪶 **Lightweight**: Minimal dependencies, small bundle size
-- 🛡️ **Error Handling**: Proper error propagation with Promises
+- 🛡️ **Advanced Error Handling**: Comprehensive error handling with custom error types, retry mechanisms, and recovery strategies
+- 🔄 **Automatic Retry**: Built-in exponential backoff retry with circuit breaker pattern
+- 📊 **Error Monitoring**: Error logging, statistics, and health monitoring
+- 🛠️ **Error Recovery**: Automatic error recovery and cleanup mechanisms
+- ⚡ **Rate Limiting**: Prevents error storms with intelligent rate limiting
 
 ## Installation
 
@@ -157,6 +161,143 @@ if (dbAPI.db) {
 }
 ```
 
+## Advanced Error Handling
+
+This library includes comprehensive error handling features that automatically manage database errors, retries, and recovery.
+
+### Error Types
+
+The library provides specific error classes for different scenarios:
+
+```typescript
+import { 
+  DatabaseError, 
+  DatabaseConnectionError, 
+  StorageQuotaError, 
+  DataValidationError,
+  ErrorClassifier 
+} from 'react-indexeddb-asyncapi';
+
+try {
+  const store = dbAPI.query('users');
+  await store.add({ email: 'duplicate@example.com' }); // Duplicate email
+} catch (error) {
+  if (error instanceof DataValidationError) {
+    console.log('Validation error:', error.validationErrors);
+  } else if (error instanceof StorageQuotaError) {
+    console.log('Storage quota exceeded');
+  } else if (error instanceof DatabaseConnectionError) {
+    console.log('Connection failed:', error.message);
+  }
+}
+```
+
+### Automatic Retry and Recovery
+
+Operations are automatically retried with exponential backoff:
+
+```typescript
+// Retries are automatic - no additional code needed
+try {
+  const store = dbAPI.query('users');
+  const result = await store.add({ name: 'John' });
+  // If this fails due to temporary issues, it will be retried automatically
+} catch (error) {
+  // Only permanent failures reach here
+  console.error('Operation failed after retries:', error);
+}
+```
+
+### Error Monitoring and Statistics
+
+Monitor database health and error patterns:
+
+```typescript
+// Check database health
+const isHealthy = await dbAPI.isHealthy();
+console.log('Database healthy:', isHealthy);
+
+// Get error statistics
+const stats = await dbAPI.getErrorStats();
+console.log('Total errors:', stats.totalErrors);
+console.log('Recent errors (24h):', stats.recentErrors);
+console.log('Errors by category:', stats.errorsByCategory);
+
+// Get detailed error logs
+const errorLogs = dbAPI.getErrorLogs();
+errorLogs.forEach(log => {
+  console.log(`${log.timestamp}: ${log.message}`);
+});
+```
+
+### Error Classification
+
+Understand error types for better handling:
+
+```typescript
+import { ErrorClassifier } from 'react-indexeddb-asyncapi';
+
+try {
+  // Your database operations
+} catch (error) {
+  if (ErrorClassifier.isRetryable(error)) {
+    console.log('This error will be retried automatically');
+  }
+  
+  if (ErrorClassifier.requiresUserAction(error)) {
+    console.log('User intervention needed');
+    // Show user-friendly error message
+  }
+  
+  const category = ErrorClassifier.classify(error);
+  console.log('Error category:', category); // 'retryable' | 'permanent' | 'user' | 'system'
+}
+```
+
+### Custom Error Handling
+
+For advanced scenarios, you can use the error handling components directly:
+
+```typescript
+import { RetryManager, CircuitBreaker } from 'react-indexeddb-asyncapi';
+
+const retryManager = new RetryManager();
+
+// Custom retry configuration
+await retryManager.withRetry(
+  () => myDatabaseOperation(),
+  'my_operation',
+  {
+    maxRetries: 5,
+    baseDelay: 200,
+    maxDelay: 10000,
+    backoffFactor: 1.5
+  }
+);
+
+// Circuit breaker for preventing cascading failures
+const circuitBreaker = new CircuitBreaker();
+await circuitBreaker.execute(
+  () => myDatabaseOperation(),
+  'operation_key',
+  {
+    failureThreshold: 3,
+    resetTimeout: 30000
+  }
+);
+```
+
+### Error Recovery Strategies
+
+The library automatically handles common error scenarios:
+
+- **Storage Quota Exceeded**: Automatic cleanup of temporary data
+- **Version Conflicts**: Database reconnection and recovery
+- **Transaction Failures**: Automatic retry with exponential backoff
+- **Connection Issues**: Reconnection attempts and graceful degradation
+
+For detailed error handling documentation, see [ERROR_HANDLING.md](./ERROR_HANDLING.md).
+
 ## API Reference
 
 ### Constructor
@@ -213,6 +354,48 @@ Deletes the entire database.
 
 ```typescript
 await dbAPI.clear();
+```
+
+#### `isHealthy(): Promise<boolean>`
+
+Checks if the database is healthy and responsive.
+
+```typescript
+const healthy = await dbAPI.isHealthy();
+if (!healthy) {
+  console.warn('Database health check failed');
+}
+```
+
+#### `getErrorStats(): Promise<ErrorStats>`
+
+Returns comprehensive error statistics.
+
+```typescript
+const stats = await dbAPI.getErrorStats();
+console.log('Total errors:', stats.totalErrors);
+console.log('Recent errors:', stats.recentErrors);
+console.log('Errors by level:', stats.errorsByLevel);
+console.log('Errors by category:', stats.errorsByCategory);
+```
+
+#### `getErrorLogs(): ErrorLog[]`
+
+Returns detailed error logs.
+
+```typescript
+const logs = dbAPI.getErrorLogs();
+logs.forEach(log => {
+  console.log(`${log.timestamp} [${log.level}]: ${log.message}`);
+});
+```
+
+#### `close(): void`
+
+Forcefully closes the database connection.
+
+```typescript
+dbAPI.close();
 ```
 
 ### AsyncProxy Methods
@@ -279,9 +462,61 @@ interface AsyncCursorResult<T = any> {
 }
 ```
 
+### ErrorLog
+
+```typescript
+interface ErrorLog {
+  id?: number;
+  timestamp: string;
+  level: 'error' | 'warn' | 'info';
+  message: string;
+  error?: {
+    name: string;
+    message: string;
+    stack?: string;
+    code?: string;
+    category?: string;
+  };
+  context?: string;
+  userAgent: string;
+  url: string;
+  sessionId: string;
+}
+```
+
+### ErrorStats
+
+```typescript
+interface ErrorStats {
+  totalErrors: number;
+  errorsByLevel: Record<string, number>;
+  errorsByCategory: Record<string, number>;
+  recentErrors: number;
+}
+```
+
+### DatabaseError Classes
+
+```typescript
+// Base error class
+abstract class DatabaseError extends Error {
+  abstract readonly code: string;
+  abstract readonly category: 'user' | 'system' | 'network' | 'data';
+  constructor(message: string, context?: string, originalError?: Error);
+}
+
+// Specific error types
+class DatabaseConnectionError extends DatabaseError;
+class DatabaseVersionError extends DatabaseError;
+class StorageQuotaError extends DatabaseError;
+class TransactionError extends DatabaseError;
+class DataValidationError extends DatabaseError;
+class ObjectStoreNotFoundError extends DatabaseError;
+```
+
 ## Error Handling
 
-All operations return Promises, so you can use standard try/catch blocks:
+The library includes comprehensive error handling with automatic retry, recovery, and monitoring. All operations return Promises with enhanced error information:
 
 ```typescript
 try {
@@ -289,23 +524,44 @@ try {
   const user = await store.get(123);
   console.log(user);
 } catch (error) {
-  console.error('Database operation failed:', error);
+  // Enhanced error information available
+  if (error instanceof DatabaseError) {
+    console.error('Database error:', {
+      code: error.code,
+      category: error.category,
+      context: error.context,
+      message: error.message
+    });
+  }
 }
 ```
+
+**Key Features:**
+- **Automatic Retry**: Failed operations are automatically retried with exponential backoff
+- **Error Classification**: Errors are categorized as retryable, permanent, user, or system errors
+- **Health Monitoring**: Check database health with `await dbAPI.isHealthy()`
+- **Error Statistics**: Monitor error patterns with `await dbAPI.getErrorStats()`
+- **Recovery Strategies**: Automatic cleanup and recovery for common error scenarios
+
+For comprehensive error handling documentation, see the [Advanced Error Handling](#advanced-error-handling) section above or [ERROR_HANDLING.md](./ERROR_HANDLING.md).
 
 ## Best Practices
 
 1. **Always await `open()`** before performing operations
 2. **Use appropriate transaction modes** (`readonly` for reads, `readwrite` for writes)
-3. **Handle errors properly** with try/catch blocks
-4. **Use indexes** for efficient querying
-5. **Close transactions promptly** by limiting scope
-6. **Version your database schema** for proper upgrades
+3. **Handle errors properly** with try/catch blocks and leverage the built-in error types
+4. **Monitor database health** regularly with `isHealthy()` for critical applications
+5. **Use indexes** for efficient querying
+6. **Close transactions promptly** by limiting scope
+7. **Version your database schema** for proper upgrades
+8. **Check error statistics** periodically to identify patterns and issues
+9. **Implement graceful degradation** for quota and connection errors
+10. **Let automatic retry handle temporary failures** - most errors are handled automatically
 
 ## Example: Complete Todo App
 
 ```typescript
-import IndexedDBAsyncAPI from 'react-indexeddb-asyncapi';
+import IndexedDBAsyncAPI, { StorageQuotaError, DataValidationError } from 'react-indexeddb-asyncapi';
 
 interface Todo {
   id?: number;
@@ -366,15 +622,60 @@ class TodoApp {
     const index = store.index('completed');
     return await index.getAll(true);
   }
+
+  // Error handling and monitoring example
+  async getAppHealth(): Promise<{ healthy: boolean; errorStats: any }> {
+    try {
+      const healthy = await this.dbAPI.isHealthy();
+      const errorStats = await this.dbAPI.getErrorStats();
+      
+      return { healthy, errorStats };
+    } catch (error) {
+      console.error('Health check failed:', error);
+      return { healthy: false, errorStats: null };
+    }
+  }
+
+  // Graceful error handling example
+  async safeAddTodo(title: string): Promise<{ success: boolean; id?: number; error?: string }> {
+    try {
+      const id = await this.addTodo(title);
+      return { success: true, id };
+    } catch (error) {
+      if (error instanceof StorageQuotaError) {
+        return { success: false, error: 'Storage full. Please free up space.' };
+      } else if (error instanceof DataValidationError) {
+        return { success: false, error: 'Invalid todo data provided.' };
+      } else {
+        return { success: false, error: 'Failed to save todo. Please try again.' };
+      }
+    }
+  }
 }
 
 // Usage
 const app = new TodoApp();
 await app.init();
 
+// Basic operations with automatic error handling
 const todoId = await app.addTodo('Learn IndexedDB');
 const todos = await app.getTodos();
 await app.toggleTodo(todoId);
+
+// Error-aware operations
+const result = await app.safeAddTodo('Another todo');
+if (result.success) {
+  console.log('Todo added with ID:', result.id);
+} else {
+  console.error('Failed to add todo:', result.error);
+}
+
+// Monitor application health
+const health = await app.getAppHealth();
+console.log('App healthy:', health.healthy);
+if (health.errorStats) {
+  console.log('Error statistics:', health.errorStats);
+}
 ```
 
 ## Browser Support
@@ -385,11 +686,17 @@ This package works in all modern browsers that support:
 - Proxy objects
 - Async/await (or with transpilation)
 
+## Documentation
+
+- [Comprehensive Error Handling Guide](./ERROR_HANDLING.md) - Detailed documentation on error handling features
+- [GitHub Wiki](https://github.com/pallavsharma505/react-indexeddb-asyncapi/wiki) - Additional documentation and examples
+
 ## Pending Changes
 
 - Support for tests
-- Linting operations
+- Linting operations  
 - Additional examples and tutorials
+- Performance optimization guides
 
 ## License
 
